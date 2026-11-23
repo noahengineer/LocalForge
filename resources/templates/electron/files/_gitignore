@@ -1,0 +1,8 @@
+node_modules/
+dist/
+out/
+
+# LocalForge / agent tooling
+graphify-out/
+.playwright-mcp/
+.env

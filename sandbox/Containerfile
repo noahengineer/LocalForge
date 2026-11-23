@@ -1,0 +1,105 @@
+# LocalForge sandbox image: one container per project. The agent (OpenCode) runs in here with a
+# full toolchain and its own XFCE desktop (exposed through noVNC). Only /workspace is mounted.
+ARG UBUNTU_VERSION=26.04
+FROM docker.io/library/ubuntu:${UBUNTU_VERSION}
+
+ARG NODE_VERSION=v26.13.1
+ARG OPENCODE_VERSION=1.19.6
+ARG PLAYWRIGHT_MCP_VERSION=0.0.86
+ARG GRAPHIFY_VERSION=0.9.115
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC
+
+# --- Base system + C/C++ toolchain + Python -------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl wget git git-lfs gnupg sudo locales tzdata less nano vim-tiny jq \
+      ripgrep fd-find tree file unzip zip xz-utils bzip2 tar procps psmisc lsof iproute2 \
+      iputils-ping dnsutils netcat-openbsd openssh-client rsync patch bc \
+      build-essential cmake ninja-build gdb clang clangd clang-format lldb lld pkg-config \
+      autoconf autoconf-archive automake libtool bison flex \
+      python3 python3-pip python3-venv python3-dev pipx \
+    && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Desktop: XFCE on TigerVNC, noVNC bridge, GUI automation tools ---------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      xfce4 xfce4-terminal xfce4-taskmanager mousepad thunar dbus-x11 at-spi2-core \
+      adwaita-icon-theme elementary-xfce-icon-theme hicolor-icon-theme \
+      tigervnc-standalone-server tigervnc-tools novnc python3-websockify \
+      xdotool scrot imagemagick x11-utils x11-xserver-utils xauth xclip wmctrl \
+      fonts-dejavu fonts-liberation fonts-noto-color-emoji \
+      supervisor \
+    && (apt-get purge -y xfce4-screensaver light-locker xfce4-power-manager || true) \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+
+# --- Node.js (official build, checksum verified) ---------------------------------------------
+RUN set -eux; cd /tmp; \
+    f="node-${NODE_VERSION}-linux-x64.tar.xz"; \
+    curl -fsSLO "https://nodejs.org/dist/${NODE_VERSION}/${f}"; \
+    curl -fsSLO "https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt"; \
+    grep " ${f}\$" SHASUMS256.txt | sha256sum -c -; \
+    tar -xJf "$f" -C /usr/local --strip-components=1 --no-same-owner; \
+    rm -f "$f" SHASUMS256.txt; node --version; npm --version
+
+# --- Rust (rustup, shared install) ------------------------------------------------------------
+ENV RUSTUP_HOME=/opt/rust/rustup CARGO_HOME=/opt/rust/cargo
+ENV PATH=/opt/rust/cargo/bin:$PATH
+RUN set -eux; curl -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh; \
+    sh /tmp/rustup-init.sh -y --no-modify-path --profile minimal --default-toolchain stable \
+       --component rustfmt --component clippy; \
+    rm /tmp/rustup-init.sh; rustc --version; cargo --version
+
+# --- vcpkg ------------------------------------------------------------------------------------
+ENV VCPKG_ROOT=/opt/vcpkg VCPKG_DISABLE_METRICS=1
+RUN set -eux; git clone --depth 1 https://github.com/microsoft/vcpkg.git /opt/vcpkg; \
+    /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics; ln -sf /opt/vcpkg/vcpkg /usr/local/bin/vcpkg; vcpkg version
+
+# --- OpenCode + Playwright MCP + Chromium -----------------------------------------------------
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN set -eux; npm install -g --no-audit --no-fund \
+      "opencode-ai@${OPENCODE_VERSION}" "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}"; \
+    opencode --version; \
+    # Install the browser revision that matches the Playwright build bundled with the MCP server.
+    node "$(npm root -g)/@playwright/mcp/node_modules/playwright/cli.js" install --with-deps chromium; \
+    rm -rf /var/lib/apt/lists/* /root/.npm
+
+# --- graphify (knowledge graph tool) ----------------------------------------------------------
+ENV PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin
+RUN pipx install "graphifyy==${GRAPHIFY_VERSION}" && graphify --help >/dev/null
+
+# --- LocalForge computer-use MCP server ------------------------------------------------------
+COPY computer-use-mcp/package.json computer-use-mcp/package-lock.json /opt/localforge/computer-use-mcp/
+RUN cd /opt/localforge/computer-use-mcp && npm ci --omit=dev --no-audit --no-fund && rm -rf /root/.npm
+COPY computer-use-mcp/index.js /opt/localforge/computer-use-mcp/index.js
+
+# --- Runtime files + the unprivileged `dev` user ---------------------------------------------
+COPY rootfs/ /
+RUN set -eux; \
+    # Ubuntu images ship a uid-1000 user `ubuntu`; replace it with `dev` (uid/gid 1000).
+    if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu || true; fi; \
+    groupadd -g 1000 dev 2>/dev/null || groupmod -n dev "$(getent group 1000 | cut -d: -f1)"; \
+    useradd -m -u 1000 -g 1000 -s /bin/bash dev; \
+    echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev && chmod 0440 /etc/sudoers.d/dev; \
+    chmod +x /opt/localforge/bin/* /usr/local/bin/chromium; \
+    cp -a /opt/localforge/skel/. /home/dev/; \
+    mkdir -p /home/dev/.config/xfce4/xfconf/xfce-perchannel-xml /home/dev/.config/opencode /workspace \
+      /home/dev/.local/share/opencode /home/dev/.local/state /home/dev/.cache; \
+    if [ -f /etc/xdg/xfce4/panel/default.xml ]; then \
+      cp /etc/xdg/xfce4/panel/default.xml /home/dev/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml; fi; \
+    chmod +x /home/dev/Desktop/*.desktop; \
+    printf '%s\n' \
+      'export PATH=/opt/rust/cargo/bin:$PATH' \
+      'export VCPKG_ROOT=/opt/vcpkg' \
+      'export PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright' \
+      'export DISPLAY=:1' \
+      'cd /workspace 2>/dev/null || true' > /etc/profile.d/localforge.sh; \
+    chown -R 1000:1000 /home/dev /workspace /opt/rust /opt/vcpkg /opt/ms-playwright
+
+ENV DISPLAY=:1 HOME=/home/dev USER=dev SHELL=/bin/bash \
+    OPENCODE_ENABLE_EXA=1 OPENCODE_DISABLE_AUTOUPDATE=1
+USER dev
+WORKDIR /workspace
+EXPOSE 4096 6080
+ENTRYPOINT ["/opt/localforge/bin/entrypoint"]

@@ -1,0 +1,5 @@
+
+# LocalForge / agent tooling
+graphify-out/
+.playwright-mcp/
+.env

@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: existing-project-gui-and-fix
+expected_outcome: |
+  A LocalForge plan that starts with Open existing folder (not a template), begins with exploration and reproducing the crash before fixing it, then adds a simple GUI in small milestones with sandbox-appropriate checks, without pretending to know the script's contents.

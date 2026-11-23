@@ -1,0 +1,11 @@
+{
+  "id": "electron",
+  "name": "Electron app",
+  "description": "Minimal Electron desktop app (main, preload, renderer) that runs on the agent's desktop.",
+  "commands": {
+    "setup": "npm install",
+    "test": "npm test",
+    "run": "npm start"
+  },
+  "notes": "npm start launches the app on the agent's desktop (DISPLAY=:1, with --no-sandbox because it runs inside a container). Verify the UI with the computer-use screenshot tool after launching it in the background (launch_app \"npm start\")."
+}

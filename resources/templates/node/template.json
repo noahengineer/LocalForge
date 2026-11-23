@@ -1,0 +1,11 @@
+{
+  "id": "node",
+  "name": "Node backend",
+  "description": "Dependency-free Node.js HTTP service (ES modules) with node:test tests.",
+  "commands": {
+    "test": "npm test",
+    "run": "npm start",
+    "dev": "npm run dev"
+  },
+  "notes": "The server listens on PORT (default 3000). It uses only Node built-ins; add dependencies with npm install <pkg>. Test HTTP endpoints with curl http://127.0.0.1:3000/health or with Playwright."
+}

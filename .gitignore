@@ -1,0 +1,9 @@
+node_modules/
+out/
+release/
+dist/
+e2e/output/
+sandbox/computer-use-mcp/node_modules/
+*.log
+.DS_Store
+skills/localforge-plan-workspace/

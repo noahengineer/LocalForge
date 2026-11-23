@@ -1,0 +1,268 @@
+@import 'tailwindcss';
+@import 'highlight.js/styles/github-dark.css' layer(base);
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic colour tokens. Dark is the default; .light switches the palette. */
+@theme {
+  --font-sans: 'Inter', 'Noto Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, 'DejaVu Sans Mono', monospace;
+  --font-serif: 'Iowan Old Style', 'Source Serif 4', 'Noto Serif', Georgia, serif;
+
+  --color-bg: var(--lf-bg);
+  --color-panel: var(--lf-panel);
+  --color-raised: var(--lf-raised);
+  --color-hover: var(--lf-hover);
+  --color-line: var(--lf-line);
+  --color-line-strong: var(--lf-line-strong);
+  --color-fg: var(--lf-fg);
+  --color-muted: var(--lf-muted);
+  --color-faint: var(--lf-faint);
+  --color-accent: var(--lf-accent);
+  --color-accent-fg: var(--lf-accent-fg);
+  --color-accent-soft: var(--lf-accent-soft);
+  --color-ok: var(--lf-ok);
+  --color-warn: var(--lf-warn);
+  --color-bad: var(--lf-bad);
+  --color-info: var(--lf-info);
+  --color-plan: var(--lf-plan);
+  --color-code: var(--lf-code);
+}
+
+:root,
+.dark {
+  --lf-bg: #1f1e1c;
+  --lf-panel: #262523;
+  --lf-raised: #2f2d2a;
+  --lf-hover: #35332f;
+  --lf-line: #3a3834;
+  --lf-line-strong: #4a4742;
+  --lf-fg: #ece9e3;
+  --lf-muted: #a7a29a;
+  --lf-faint: #77726b;
+  --lf-accent: #e0874e;
+  --lf-accent-fg: #1f1e1c;
+  --lf-accent-soft: rgba(224, 135, 78, 0.14);
+  --lf-ok: #6fbf73;
+  --lf-warn: #e6b450;
+  --lf-bad: #e5675f;
+  --lf-info: #6fa8dc;
+  --lf-plan: #9b8cf0;
+  --lf-code: #191816;
+  color-scheme: dark;
+}
+
+.light {
+  --lf-bg: #f7f5f1;
+  --lf-panel: #efece6;
+  --lf-raised: #ffffff;
+  --lf-hover: #e6e2da;
+  --lf-line: #ddd8cf;
+  --lf-line-strong: #c9c3b8;
+  --lf-fg: #262420;
+  --lf-muted: #6b665e;
+  --lf-faint: #948e84;
+  --lf-accent: #c7652b;
+  --lf-accent-fg: #ffffff;
+  --lf-accent-soft: rgba(199, 101, 43, 0.12);
+  --lf-ok: #3f8f46;
+  --lf-warn: #b7841f;
+  --lf-bad: #c4423a;
+  --lf-info: #3d77ad;
+  --lf-plan: #6a58d4;
+  --lf-code: #f1eee8;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--lf-bg);
+  color: var(--lf-fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Text the user may want to copy */
+.selectable,
+.prose-lf,
+pre,
+code,
+textarea,
+input {
+  user-select: text;
+}
+
+::selection {
+  background: var(--lf-accent-soft);
+}
+
+/* Thin, quiet scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lf-line-strong) transparent;
+}
+
+/* Markdown content */
+.prose-lf {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.prose-lf > * + * {
+  margin-top: 0.75em;
+}
+.prose-lf h1,
+.prose-lf h2,
+.prose-lf h3,
+.prose-lf h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.2em;
+}
+.prose-lf h1 {
+  font-size: 1.35em;
+}
+.prose-lf h2 {
+  font-size: 1.2em;
+}
+.prose-lf h3 {
+  font-size: 1.05em;
+}
+.prose-lf ul,
+.prose-lf ol {
+  padding-left: 1.4em;
+}
+.prose-lf ul {
+  list-style: disc;
+}
+.prose-lf ol {
+  list-style: decimal;
+}
+.prose-lf li + li {
+  margin-top: 0.25em;
+}
+.prose-lf a {
+  color: var(--lf-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-lf blockquote {
+  border-left: 3px solid var(--lf-line-strong);
+  padding-left: 0.9em;
+  color: var(--lf-muted);
+}
+.prose-lf :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--lf-raised);
+  border: 1px solid var(--lf-line);
+  border-radius: 5px;
+  padding: 0.08em 0.35em;
+}
+.prose-lf pre {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: var(--lf-code);
+  border: 1px solid var(--lf-line);
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+}
+.prose-lf pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+.prose-lf table {
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+.prose-lf th,
+.prose-lf td {
+  border: 1px solid var(--lf-line);
+  padding: 0.3em 0.6em;
+}
+.prose-lf hr {
+  border-color: var(--lf-line);
+}
+
+.light .hljs {
+  color: #24292e;
+}
+.light .hljs-keyword,
+.light .hljs-selector-tag {
+  color: #d73a49;
+}
+.light .hljs-string {
+  color: #032f62;
+}
+.light .hljs-title,
+.light .hljs-title.function_ {
+  color: #6f42c1;
+}
+.light .hljs-comment {
+  color: #6a737d;
+}
+.light .hljs-number,
+.light .hljs-literal,
+.light .hljs-built_in {
+  color: #005cc5;
+}
+
+/* Diff lines */
+.diff-add {
+  background: rgba(111, 191, 115, 0.13);
+}
+.diff-del {
+  background: rgba(229, 103, 95, 0.13);
+}
+.diff-hunk {
+  color: var(--lf-info);
+}
+
+@keyframes lf-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.lf-pulse {
+  animation: lf-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes lf-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.lf-shimmer-text {
+  background: linear-gradient(90deg, var(--lf-muted) 0%, var(--lf-fg) 50%, var(--lf-muted) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lf-shimmer 2.4s linear infinite;
+}
+
+/* noVNC: transparent backdrop, canvas pinned to the top (noVNC centres it with margin:auto) */
+.vnc-host > div {
+  background: transparent !important;
+}
+.vnc-host canvas {
+  margin: 0 auto !important;
+}

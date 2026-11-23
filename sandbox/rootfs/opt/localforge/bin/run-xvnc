@@ -1,0 +1,10 @@
+#!/bin/bash
+# TigerVNC X server for the agent's desktop. No VNC password: the VNC port only listens on the
+# container's loopback and is reached through websockify, which the host publishes on 127.0.0.1.
+GEOMETRY="${LOCALFORGE_SCREEN:-1280x800}"
+rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
+exec Xvnc :1 \
+  -geometry "$GEOMETRY" -depth 24 -dpi 96 \
+  -SecurityTypes None -localhost=1 -rfbport 5901 \
+  -AlwaysShared -AcceptSetDesktopSize=0 \
+  -desktop "Agent desktop" -nolisten tcp -s 0

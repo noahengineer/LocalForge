@@ -1,0 +1,5 @@
+#!/bin/bash
+# Launch the Playwright-installed Chromium on the agent's desktop.
+BIN=$(ls -d /opt/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -n1)
+if [ -z "$BIN" ]; then echo "Chromium not found under /opt/ms-playwright" >&2; exit 1; fi
+exec "$BIN" --no-sandbox --no-first-run --no-default-browser-check --disable-dev-shm-usage --user-data-dir="$HOME/.config/chromium-desktop" "$@"

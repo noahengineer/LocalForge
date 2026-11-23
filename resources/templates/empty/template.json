@@ -1,0 +1,7 @@
+{
+  "id": "empty",
+  "name": "Empty",
+  "description": "A blank Git repository with a README. Choose the stack later.",
+  "commands": {},
+  "notes": "This project has no build system yet. When you add one, document its build, test and run commands in this file under \"Project commands\"."
+}

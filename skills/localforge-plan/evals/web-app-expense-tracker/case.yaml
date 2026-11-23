@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: web-app-expense-tracker
+expected_outcome: |
+  A LocalForge plan using the Vite + React + TypeScript template, localStorage persistence, milestone prompts verified with npm run build and Playwright snapshots against a background dev server, noting the dev server is only visible in the Agent's Desktop.

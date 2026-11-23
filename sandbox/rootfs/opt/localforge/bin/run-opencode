@@ -1,0 +1,12 @@
+#!/bin/bash
+# OpenCode headless server. The LocalForge app writes ~/.config/opencode/opencode.json into the
+# container after creating it; wait for that before starting so the server never runs unconfigured.
+CONFIG="$HOME/.config/opencode/opencode.json"
+for _ in $(seq 1 600); do
+  [ -s "$CONFIG" ] && break
+  sleep 0.5
+done
+export DISPLAY=:1
+export OPENCODE_DISABLE_AUTOUPDATE=1
+cd /workspace || exit 1
+exec opencode serve --hostname 0.0.0.0 --port 4096 --print-logs --log-level INFO

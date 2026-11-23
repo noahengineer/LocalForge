@@ -1,0 +1,13 @@
+{
+  "name": "localforge-computer-use-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server giving the agent mouse/keyboard/screenshot control of its own sandbox desktop",
+  "main": "index.js",
+  "bin": { "computer-use-mcp": "index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
+  }
+}

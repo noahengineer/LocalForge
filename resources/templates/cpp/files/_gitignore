@@ -1,0 +1,9 @@
+build/
+vcpkg_installed/
+.cache/
+compile_commands.json
+
+# LocalForge / agent tooling
+graphify-out/
+.playwright-mcp/
+.env

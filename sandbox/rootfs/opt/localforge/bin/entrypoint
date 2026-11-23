@@ -1,0 +1,10 @@
+#!/bin/bash
+# LocalForge sandbox entrypoint: prepare runtime dirs and hand over to supervisord.
+set -e
+mkdir -p /tmp/localforge/logs "$HOME/.config/opencode"
+# X11 socket dir must be world-writable + sticky; it is created at build time but /tmp may be fresh.
+if [ ! -d /tmp/.X11-unix ]; then mkdir -p /tmp/.X11-unix; chmod 1777 /tmp/.X11-unix 2>/dev/null || true; fi
+export XDG_RUNTIME_DIR=/tmp/localforge/xdg-runtime
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+if [ "$#" -gt 0 ]; then exec "$@"; fi
+exec /usr/bin/supervisord -c /opt/localforge/supervisord.conf

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34312d"/>
+      <stop offset="1" stop-color="#1c1b19"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffb27a" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#e0874e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="anvil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f1ea"/>
+      <stop offset="1" stop-color="#c9c3b8"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+  <rect x="16.5" y="16.5" width="479" height="479" rx="107.5" fill="none" stroke="#ffffff" stroke-opacity="0.07"/>
+  <circle cx="360" cy="120" r="80" fill="url(#glow)"/>
+  <path d="M360 66l15 39 39 15-39 15-15 39-15-39-39-15 39-15z" fill="#e0874e"/>
+  <path d="M70 214C112 196 134 194 166 194L414 194L414 228L396 228L396 256C352 258 338 276 334 314C334 344 352 364 382 374L382 404L168 404L168 374C200 364 218 344 218 314C214 278 200 260 166 256C128 252 100 238 70 214Z" fill="url(#anvil)"/>
+  <rect x="150" y="410" width="250" height="10" rx="5" fill="#000" opacity="0.3"/>
+</svg>

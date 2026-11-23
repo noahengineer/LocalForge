@@ -1,0 +1,11 @@
+{
+  "id": "cpp",
+  "name": "C++ (CMake + vcpkg)",
+  "description": "C++20 executable with CMake presets, Ninja, vcpkg manifest mode and a CTest test.",
+  "commands": {
+    "build": "cmake --preset default && cmake --build --preset default",
+    "test": "ctest --preset default",
+    "run": "./build/{{cident}}"
+  },
+  "notes": "Dependencies: add them to vcpkg.json (\"dependencies\": [\"fmt\"]) and use find_package() in CMakeLists.txt; vcpkg installs them automatically during configure (VCPKG_ROOT=/opt/vcpkg). The build directory is ./build. Debug with gdb ./build/{{cident}}."
+}

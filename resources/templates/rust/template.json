@@ -1,0 +1,11 @@
+{
+  "id": "rust",
+  "name": "Rust",
+  "description": "Cargo binary crate (edition 2024) with a unit test.",
+  "commands": {
+    "build": "cargo build",
+    "test": "cargo test",
+    "run": "cargo run"
+  },
+  "notes": "Add dependencies with cargo add <crate>. Run cargo clippy and cargo fmt before finishing a change."
+}

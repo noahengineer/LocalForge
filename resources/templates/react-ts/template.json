@@ -1,0 +1,12 @@
+{
+  "id": "react-ts",
+  "name": "Vite + React + TypeScript",
+  "description": "Web app scaffolded from the official create-vite react-ts template.",
+  "commands": {
+    "setup": "npm install",
+    "build": "npm run build",
+    "test": "npm run build && npm run lint",
+    "dev": "npm run dev -- --host 0.0.0.0 --port 5173"
+  },
+  "notes": "Start the dev server in the background (npm run dev -- --host 0.0.0.0 --port 5173 > /tmp/vite.log 2>&1 &) and test the app with the Playwright browser tools at http://127.0.0.1:5173. The browser window is visible on the agent's desktop."
+}

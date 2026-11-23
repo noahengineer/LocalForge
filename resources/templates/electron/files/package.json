@@ -1,0 +1,14 @@
+{
+  "name": "{{slug}}",
+  "version": "0.1.0",
+  "private": true,
+  "description": "{{description}}",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "45.4.1"
+  }
+}

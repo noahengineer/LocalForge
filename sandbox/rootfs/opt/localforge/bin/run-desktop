@@ -1,0 +1,12 @@
+#!/bin/bash
+# XFCE session on display :1 (waits for the X server first).
+export DISPLAY=:1
+for _ in $(seq 1 100); do
+  [ -S /tmp/.X11-unix/X1 ] && xdpyinfo >/dev/null 2>&1 && break
+  sleep 0.1
+done
+export XDG_RUNTIME_DIR=/tmp/localforge/xdg-runtime
+export XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=XFCE NO_AT_BRIDGE=1
+# Never blank the screen (the agent and the user watch it through VNC).
+xset s off -dpms s noblank 2>/dev/null || true
+exec dbus-launch --exit-with-session xfce4-session

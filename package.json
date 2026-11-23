@@ -1,0 +1,108 @@
+{
+  "name": "localforge",
+  "productName": "LocalForge",
+  "version": "0.1.0",
+  "description": "Local AI coding desktop app: one-click sandboxed projects driven by a local llama.cpp model through OpenCode",
+  "author": {
+    "name": "LocalForge",
+    "email": "localforge@localhost"
+  },
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "desktopName": "dev.localforge.LocalForge.desktop",
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dist": "electron-vite build && electron-builder --linux AppImage",
+    "install-app": "node scripts/install-app.mjs",
+    "e2e:backend": "tsx e2e/backend-e2e.ts",
+    "e2e:ui": "tsx e2e/ui-e2e.ts",
+    "verify:stats": "tsx e2e/stats-verify.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "^1.19.6",
+    "vis-network": "9.1.6"
+  },
+  "devDependencies": {
+    "@novnc/novnc": "1.7.0",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/novnc__novnc": "1.6.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0",
+    "electron-vite": "6.0.0",
+    "highlight.js": "11.12.0",
+    "lucide-react": "1.78.0",
+    "playwright": "1.65.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "rehype-highlight": "7.0.2",
+    "remark-gfm": "4.0.1",
+    "tailwindcss": "4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "8.3.8",
+    "vitest": "^5.1.1",
+    "zustand": "5.1.0"
+  },
+  "build": {
+    "appId": "dev.localforge.LocalForge",
+    "productName": "LocalForge",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/templates",
+        "to": "templates"
+      },
+      {
+        "from": "sandbox",
+        "to": "sandbox",
+        "filter": [
+          "**/*",
+          "!computer-use-mcp/node_modules/**"
+        ]
+      },
+      {
+        "from": "build/icons/512x512.png",
+        "to": "icon.png"
+      }
+    ],
+    "toolsets": {
+      "appimage": "1.0.3"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "executableName": "localforge",
+      "syncDesktopName": true,
+      "icon": "build/icons",
+      "category": "Development",
+      "synopsis": "Local AI coding with sandboxed projects",
+      "artifactName": "LocalForge-${version}-${arch}.${ext}"
+    }
+  }
+}
