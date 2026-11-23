@@ -212,3 +212,7 @@ All of these were run on this machine against the real llama-server, Podman and 
 * Only one stats proxy can listen on the port, so run one LocalForge instance at a time (the app enforces a single window).
 * The sandbox has internet access. That is by design (web search, package installs), but it means the agent can download anything.
 * Checkpoints are only created when a turn changed files. "Undo" rewinds the conversation with OpenCode's revert; the hidden turns are deleted when you send the next message.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
