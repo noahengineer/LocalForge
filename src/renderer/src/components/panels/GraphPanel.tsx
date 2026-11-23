@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Network, RefreshCw } from 'lucide-react'
 import { api, errMsg } from '../../api'
 import { toast, useStore } from '../../store'
@@ -15,6 +15,30 @@ export function GraphPanel({ projectId }: { projectId: string }) {
   const [info, setInfo] = useState<{ exists: boolean; builtAt: number | null; url: string } | null>(null)
   const [building, setBuilding] = useState(false)
   const [nonce, setNonce] = useState(0)
+  const frame = useRef<HTMLIFrameElement>(null)
+  // graphify's side panel open/closed, remembered here (the sandboxed map page can't store it).
+  const sidebar = useRef(
+    (() => {
+      try {
+        return localStorage.getItem('lf.mapSidebar') !== '0'
+      } catch {
+        return true
+      }
+    })(),
+  )
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.source !== frame.current?.contentWindow || typeof e.data?.lfMapSidebar !== 'boolean') return
+      sidebar.current = e.data.lfMapSidebar
+      try {
+        localStorage.setItem('lf.mapSidebar', e.data.lfMapSidebar ? '1' : '0')
+      } catch {
+        /* not remembered */
+      }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
 
   const load = useCallback(() => {
     void api
@@ -50,8 +74,9 @@ export function GraphPanel({ projectId }: { projectId: string }) {
       </div>
       {info?.exists ? (
         <iframe
+          ref={frame}
           key={`${info.builtAt}-${nonce}`}
-          src={`${info.url}?v=${info.builtAt ?? 0}-${nonce}`}
+          src={`${info.url}?v=${info.builtAt ?? 0}-${nonce}${sidebar.current ? '' : '#sidebar=0'}`}
           title="Code map"
           sandbox="allow-scripts"
           className="min-h-0 w-full flex-1 border-0 bg-white"

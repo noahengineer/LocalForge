@@ -332,3 +332,6 @@ it must be a regular file really inside the project (a symlink pointing elsewher
 graphify's page loads vis-network 9.1.6 from unpkg.com; that tag is rewritten to a bundled copy
 (dependency `vis-network@9.1.6`), so the map works offline. The renderer CSP allows only
 `frame-src lf-graph:`. Verified by `e2e/graph-e2e.ts` on the dev build and the packaged AppImage.
+LocalForge also adds a collapse button for graphify's side panel (#sidebar). The sandboxed page can't
+store anything, so the open/closed state is passed in the URL hash and reported back with
+postMessage; the Map tab remembers it.
