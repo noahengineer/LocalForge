@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { createOpencodeClient, type OpencodeClient } from '@opencode-ai/sdk/v2'
-import type { OcMessage, OcSession, PermissionRequest, QuestionRequest } from '../../shared/api'
+import type { OcMessage, OcSession, PermissionRequest, QuestionRequest, Todo } from '../../shared/api'
 
 export const WORKSPACE = '/workspace'
 export const OC_USER = 'opencode'
@@ -127,6 +127,10 @@ export class OpenCodeConnection extends EventEmitter<{ event: [OcEvent]; connect
 
   async renameSession(sessionID: string, title: string): Promise<void> {
     unwrap(await this.client.session.update({ sessionID, directory: WORKSPACE, title }), 'session.update')
+  }
+
+  async todos(sessionID: string): Promise<Todo[]> {
+    return unwrap(await this.client.session.todo({ sessionID, directory: WORKSPACE }), 'session.todo') as unknown as Todo[]
   }
 
   async messages(sessionID: string): Promise<OcMessage[]> {

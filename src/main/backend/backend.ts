@@ -10,6 +10,7 @@ import type {
   FileContent,
   FolderInspection,
   HfModelInfo,
+  Todo,
   ImportProjectInput,
   ModelsInfo,
   FileNode,
@@ -687,6 +688,10 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
 
   async renameSession(projectId: string, sessionId: string, title: string): Promise<void> {
     await (await this.conn(projectId)).renameSession(sessionId, title)
+  }
+
+  async getTodos(projectId: string, sessionId: string): Promise<Todo[]> {
+    return (await this.conn(projectId)).todos(sessionId)
   }
 
   async getMessages(projectId: string, sessionId: string): Promise<OcMessage[]> {

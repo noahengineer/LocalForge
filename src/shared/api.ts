@@ -54,6 +54,14 @@ export interface FolderInspection {
   existingProjectId: string | null
 }
 
+export interface Todo {
+  content: string
+  /** pending | in_progress | completed | cancelled */
+  status: string
+  priority?: string
+  id?: string
+}
+
 export interface CachedModel {
   /** What to pass to switchModel: "org/repo:QUANT" for Hugging Face cache entries, or a .gguf path. */
   spec: string
@@ -271,6 +279,8 @@ export interface BackendApi {
   deleteSession(projectId: string, sessionId: string): Promise<void>
   renameSession(projectId: string, sessionId: string, title: string): Promise<void>
   getMessages(projectId: string, sessionId: string): Promise<OcMessage[]>
+  /** The agent's task list for a session (OpenCode's todowrite). */
+  getTodos(projectId: string, sessionId: string): Promise<Todo[]>
   getSessionStatus(projectId: string): Promise<Record<string, { type: string }>>
   prompt(input: PromptInput): Promise<void>
   abort(projectId: string, sessionId: string): Promise<void>

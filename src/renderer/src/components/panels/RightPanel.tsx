@@ -7,6 +7,7 @@ import { ChangesPanel } from './ChangesPanel'
 import { TerminalPanel } from './TerminalPanel'
 import { HardwarePanel } from './HardwarePanel'
 import { GraphPanel } from './GraphPanel'
+import { TasksBox } from './TasksBox'
 
 const TABS: Array<{ id: RightTab; label: string; icon: typeof Monitor }> = [
   { id: 'desktop', label: "Agent's Desktop", icon: Monitor },
@@ -22,6 +23,7 @@ export function RightPanel({ width }: { width: number }) {
   const projectId = useStore((s) => s.projectId)
   return (
     <aside className="flex h-full shrink-0 flex-col border-l border-line bg-bg" style={{ width }} data-testid="right-panel">
+      <TasksBox />
       <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line px-2 pt-1.5">
         {TABS.map((t) => (
           <button

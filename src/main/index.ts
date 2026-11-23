@@ -45,6 +45,7 @@ const METHODS: Array<keyof BackendApi> = [
   'deleteSession',
   'renameSession',
   'getMessages',
+  'getTodos',
   'getSessionStatus',
   'prompt',
   'abort',

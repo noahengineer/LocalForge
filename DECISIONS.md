@@ -335,3 +335,11 @@ graphify's page loads vis-network 9.1.6 from unpkg.com; that tag is rewritten to
 LocalForge also adds a collapse button for graphify's side panel (#sidebar). The sandboxed page can't
 store anything, so the open/closed state is passed in the URL hash and reported back with
 postMessage; the Map tab remembers it.
+
+### D33. Tasks box
+The agent's task list (OpenCode's `todowrite` todos) is pinned at the top of the side panel, above
+the tabs, so it stays visible whichever tab is open. It loads with the session (`session.todo`) and
+updates live from `todo.updated` events. It shows done/total (cancelled tasks aren't counted) with a
+progress bar, and the in-progress task is highlighted. It collapses to one line showing the current
+task (remembered), and is hidden when the session has no tasks. Verified by `e2e/tasks-e2e.ts`
+(isolated instance, events sent the way the backend forwards OpenCode's).

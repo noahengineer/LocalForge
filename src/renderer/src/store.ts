@@ -11,6 +11,7 @@ import type {
   QuestionRequest,
   SandboxStatus,
   TemplateInfo,
+  Todo,
 } from '@shared/api'
 import type { Settings } from '@shared/settings'
 import type { HardwareSample, LlamaServerStatus, LlmRequestStats, MessageStats, TotalsStats } from '@shared/stats'
@@ -62,6 +63,8 @@ interface State {
   agentMode: 'build' | 'plan'
   rightTab: RightTab
   rightOpen: boolean
+  /** The agent's task list per session (OpenCode todos). */
+  todos: Record<string, Todo[]>
   sidebarOpen: boolean
   sidebarWidth: number
   rightWidth: number
@@ -118,6 +121,7 @@ export const useStore = create<State>(() => ({
   agentMode: 'build',
   rightTab: 'desktop',
   ...loadLayout(),
+  todos: {},
   showSettings: false,
   showNewProject: false,
   newProjectMode: 'new',
@@ -256,6 +260,9 @@ function onOcEvent(projectId: string, ev: { type: string; properties: any }): vo
           [p.sessionID]: (s.messages[p.sessionID] ?? []).map((m) => (m.info.id === p.messageID ? { ...m, parts: m.parts.filter((x) => x.id !== p.partID) } : m)),
         },
       }))
+      break
+    case 'todo.updated':
+      if (p.sessionID) set((s) => ({ todos: { ...s.todos, [p.sessionID]: (p.todos ?? []) as Todo[] } }))
       break
     case 'permission.asked':
       set((s) => ({ permissions: [...s.permissions.filter((x) => x.id !== p.id), p as PermissionRequest] }))
@@ -421,6 +428,10 @@ export async function resyncProject(projectId: string): Promise<void> {
 }
 
 async function loadSession(projectId: string, sessionId: string): Promise<void> {
+  void api
+    .getTodos(projectId, sessionId)
+    .then((t) => set((s) => ({ todos: { ...s.todos, [sessionId]: t } })))
+    .catch(() => {})
   const [msgs, stats, totals] = await Promise.all([
     api.getMessages(projectId, sessionId),
     api.getMessageStats(projectId, sessionId).catch(() => ({})),
