@@ -12,9 +12,16 @@ Facts about the user's setup. Use them to choose the stack and to write prompts 
 7. App features the plan can rely on
 
 ## 1. The model
-- Qwen3.8-27B (4-bit) on llama.cpp, on the user's RTX 4060 Ti 16 GB. Part of the model runs on the
+- By default Qwen3.8-27B (4-bit) on llama.cpp, on the user's RTX 4060 Ti 16 GB. The user can switch
+  models from the **model pill** in the chat box (downloaded GGUF models, or new ones from Hugging Face
+  in Settings → Model); plan for this 27B unless they say otherwise. Part of the model runs on the
   CPU, so expect about **6–8 tokens/s** for generation and **400–580 tokens/s** for reading prompts.
-- It reasons ("thinks") before acting, and that thinking also costs time.
+- It reasons ("thinks") before acting, and that thinking also costs time. The **effort pill** (🧠) in the
+  chat box sets how much: Off, Low, Medium, Extra high (the default). Low/Medium speeds up mechanical
+  steps; keep the default for logic, debugging and planning. It applies from the next message.
+- **Subagents** (the agent's `task` tool) share the model. By default llama-server runs 4 conversations
+  that share one 64K memory, so two busy subagents can both fail with "Context size has been exceeded".
+  **Settings → Model → One conversation at a time** prevents this (subagents take turns).
 - It is multimodal: it can see screenshots and images the user pastes (each image ≈ 1000 tokens,
   about 15 s to encode).
 - A typical turn with several tool calls takes **3–10 minutes**; a big turn can take 20+.
@@ -132,6 +139,10 @@ it reproduce the bug first (ideally as a failing test).
 - **Checkpoints:** a git commit after every completed agent turn. The **Changes** tab shows the diff and
   has **Undo to here**, which restores files and rewinds the chat. The cleanest recovery from a bad
   turn is to undo, then send a narrower prompt.
+- **Retry / Edit:** hover over a message you sent for **Run again** or **Edit**; both rewind the chat and
+  the files to before that message, then send it again.
+- **Tasks box** (top of the side panel): the agent's own task list, ticked off live. Asking the agent to
+  keep a short task list makes long milestones easy to follow.
 - **New session** (sidebar): a fresh context for the same project.
 - **Context meter** (top bar): turns amber at 75% (compaction is near) and red at 90%.
 - **Queue:** messages typed while the agent works are sent when it finishes. Fine for a quick
@@ -144,4 +155,6 @@ it reproduce the bug first (ideally as a failing test).
   - **Files**;
   - **Changes**;
   - **Terminal** (a shell in the sandbox);
+  - **Map** (graphify's interactive code map; **Update map** re-reads the code, no AI needed);
   - **Hardware** (tokens/s, VRAM).
+- The project list and the side panel can be resized and collapsed (drag or double-click their edge).

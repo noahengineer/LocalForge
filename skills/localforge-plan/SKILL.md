@@ -28,8 +28,8 @@ templates, limits). Then read the section of `references/patterns.md` that match
    A plan with sensible assumptions beats an interrogation.
 
 2. **Existing code?** If the user wants to change something they already have, the plan starts with
-   **Open existing folder** instead of a template. If you can read their folder (e.g. in Claude Code
-   and they gave a path), skim the README, build files and entry points first so the prompts can name
+   **Open existing folder** instead of a template. If you can read their folder (e.g. in Claude Code,
+   or files they uploaded in a chat), skim the README, build files and entry points first so the prompts can name
    real files and functions. Otherwise say plainly that you haven't seen the code, and let the first
    milestone discover it. Never modify their files yourself: the plan is for the local agent.
 
@@ -170,6 +170,8 @@ Wait for each one to finish (the Stop button disappears) and glance at the check
 ```
 **Check:** <one line: what to look at>
 **If it goes wrong:** <one line, specific to this milestone>
+<optional, only when it clearly helps: **Effort:** Low/Medium for a mechanical step (renames, boilerplate,
+styling); leave the default for logic, debugging and planning>
 
 … (repeat; insert "> **Start a New session now** (sidebar)." every ~3 milestones)
 
@@ -177,7 +179,11 @@ Wait for each one to finish (the Stop button disappears) and glance at the check
 - <3–6 tips specific to this project; for web/server projects always include: "Your own browser
   can't open the sandbox's localhost URLs. Watch the app in the Agent's Desktop panel.">
 - General recovery: if a milestone goes badly, **Undo to here** on the last good checkpoint
-  (Changes tab) and paste the prompt again, or paste the exact error to the agent.
+  (Changes tab) and paste the prompt again, or paste the exact error to the agent. To adjust a
+  prompt you just sent, hover over it and use **Edit** (or **Run again**): this rewinds the chat and
+  the files to before that message.
+- If the plan has the agent explore with subagents (big existing projects), say once: turn on
+  **Settings → Model → One conversation at a time** first.
 
 ## Later ideas
 - <features deliberately left out of the first version>
@@ -201,7 +207,7 @@ Before presenting, reread every prompt as if you were the local agent with no me
   sound)? Is there at most one slow real-world run in the whole plan?
 - Are there any placeholders the user must edit inside a milestone prompt? Move them to Step 1.
 
-Count rather than guess. If you can run Python, save your draft to a file and run
-`python3 <this skill's folder>/scripts/check_plan.py <draft.md>`. It lists each milestone's word count
+Count rather than guess. If you can run Python (Claude Code, or code execution on
+claude.ai), save your draft to a file and run `python3 <this skill's folder>/scripts/check_plan.py <draft.md>`. It lists each milestone's word count
 and number of checks, and flags placeholders, skippable checks and prompts that don't tick PLAN.md.
 Fix every `FIX` line before presenting. Without Python, count the words of each prompt yourself.
