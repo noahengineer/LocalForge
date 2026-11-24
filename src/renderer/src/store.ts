@@ -69,6 +69,8 @@ interface State {
   sidebarWidth: number
   rightWidth: number
   showSettings: boolean
+  /** Which Settings page opens ('api' from the model menu's "Add API models…"). */
+  settingsSection: 'model' | 'api' | null
   showNewProject: boolean
   newProjectMode: 'new' | 'import'
   connectError: Record<string, string | null>
@@ -123,6 +125,7 @@ export const useStore = create<State>(() => ({
   ...loadLayout(),
   todos: {},
   showSettings: false,
+  settingsSection: null,
   showNewProject: false,
   newProjectMode: 'new',
   connectError: {},

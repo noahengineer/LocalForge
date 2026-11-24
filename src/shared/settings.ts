@@ -10,7 +10,34 @@ export interface StatsToggles {
   hardware: boolean // Hardware panel
 }
 
+/** A model served by an OpenAI-compatible API (Venice, OpenRouter, OpenAI…). */
+export interface ApiModel {
+  /** The provider's model id, sent as `model`. */
+  id: string
+  name: string
+  contextLimit: number
+  outputLimit: number
+  vision: boolean
+}
+
+/**
+ * An OpenAI-compatible API. Its key is NOT here: it lives in api-keys.json (encrypted with the OS
+ * keyring when available) and is only added by the stats proxy, so it never enters a sandbox.
+ */
+export interface ApiProvider {
+  id: string
+  name: string
+  /** e.g. https://api.venice.ai/api/v1 (the part before /chat/completions). */
+  baseUrl: string
+  models: ApiModel[]
+}
+
 export interface Settings {
+  api: {
+    /** The model chats use: '' = the local llama-server model, else "<providerId>/<modelId>". */
+    active: string
+    providers: ApiProvider[]
+  }
   llama: {
     /** llama-server base URL as seen from the host. */
     baseUrl: string
@@ -61,6 +88,7 @@ export interface Settings {
 
 export function defaultSettings(cpuCount = 8): Settings {
   return {
+    api: { active: '', providers: [] },
     llama: {
       baseUrl: 'http://127.0.0.1:8080',
       systemdUnit: 'llama.service',
@@ -68,7 +96,8 @@ export function defaultSettings(cpuCount = 8): Settings {
       contextLimit: 65536,
       outputLimit: 16384,
       reasoningEffort: '',
-      singleSlot: true,
+      // Off: subagents run side by side, sharing the context memory. On only when the user chooses it.
+      singleSlot: false,
     },
     proxy: { port: 8081, injectStats: true },
     projects: { root: '~/AIProjects' },

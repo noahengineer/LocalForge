@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Box, Cpu, Layers, PanelLeft, PanelRight, Play, RotateCw, Square } from 'lucide-react'
+import { Box, Cloud, Cpu, Layers, PanelLeft, PanelRight, Play, RotateCw, Square } from 'lucide-react'
 import { api, errMsg } from '../api'
 import { selectProject, toast, useStore } from '../store'
 import { cx, Dot, IconButton, Spinner } from './ui'
 import { fmtInt, fmtMiB, prettyModel } from '../format'
+import { activeApiModel } from '@shared/apiModels'
 
 /** Context used / max for the current session, with OpenCode's auto-compaction threshold. */
 export function ContextMeter() {
@@ -14,7 +15,9 @@ export function ContextMeter() {
   const live = useStore((s) => Object.values(s.live).find((r) => r.sessionId === s.sessionId && r.kind === 'agent'))
   const compactedAt = useStore((s) => (s.sessionId ? s.compactions[s.sessionId] : undefined))
   if (!settings?.ui.stats.contextMeter || !sessionId) return null
-  const max = settings.llama.contextLimit || llama?.nCtx || 65536
+  const apiModel = activeApiModel(settings)
+  const max = apiModel ? apiModel.model.contextLimit : settings.llama.contextLimit || llama?.nCtx || 65536
+  const outputLimit = apiModel ? apiModel.model.outputLimit : settings.llama.outputLimit
   let used = 0
   if (live && live.promptTotal) used = live.promptTotal + live.predictedN
   else if (last?.usage?.total_tokens) used = last.usage.total_tokens
@@ -22,7 +25,7 @@ export function ContextMeter() {
   const pct = (used / max) * 100
   const tone = pct >= 90 ? 'bg-bad' : pct >= 75 ? 'bg-warn' : 'bg-accent'
   // OpenCode compacts at context - min(output limit, 32000).
-  const compactAt = ((max - Math.min(settings.llama.outputLimit, 32000)) / max) * 100
+  const compactAt = ((max - Math.min(outputLimit, 32000)) / max) * 100
   return (
     <div className="flex items-center gap-2" title={`Context: ${fmtInt(used)} of ${fmtInt(max)} tokens (${pct.toFixed(1)}%). OpenCode compacts the conversation at ${compactAt.toFixed(0)}%.`} data-testid="context-meter">
       <span className="text-[11.5px] text-faint">Context</span>
@@ -50,6 +53,7 @@ function ModelStatus() {
   const [busy, setBusy] = useState(false)
   const up = llama?.up
   const name = settings?.llama.modelName || (llama?.modelAlias ? prettyModel(llama.modelAlias) : 'llama-server')
+  const apiModel = settings ? activeApiModel(settings) : null
   const control = async (a: 'start' | 'restart') => {
     setBusy(true)
     try {
@@ -60,6 +64,17 @@ function ModelStatus() {
     } finally {
       setBusy(false)
     }
+  }
+  if (apiModel) {
+    // An online model: llama-server's state doesn't matter for chats right now.
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-1" data-testid="model-status" data-api="true" title={`${apiModel.provider.name}: ${apiModel.model.id}\nOnline model, paid per use`}>
+        <Cloud className="h-3.5 w-3.5 text-muted" />
+        <button className="max-w-[220px] truncate text-[12.5px] hover:underline" title="API models (Settings)" onClick={() => useStore.setState({ showSettings: true, settingsSection: 'api' })}>
+          {apiModel.model.name} <span className="text-faint">· {apiModel.provider.name}</span>
+        </button>
+      </div>
+    )
   }
   return (
     <div className="flex items-center gap-2 rounded-lg border border-line px-2.5 py-1" data-testid="model-status" data-up={up ? 'true' : 'false'} title={llama?.error ?? `${llama?.modelAlias ?? ''}\nslots busy: ${llama?.busySlots ?? 0}/${llama?.totalSlots ?? '?'}`}>

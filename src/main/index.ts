@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell, nativeImage } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, nativeImage, safeStorage } from 'electron'
 import { handleGraphScheme, registerGraphScheme } from './graphProtocol'
 import os from 'node:os'
 import path from 'node:path'
@@ -73,6 +73,9 @@ const METHODS: Array<keyof BackendApi> = [
   'graphInfo',
   'buildGraph',
   'setSingleSlot',
+  'apiKeyStatus',
+  'setApiKey',
+  'listApiModels',
   'ptyOpen',
   'ptyInput',
   'ptyResize',
@@ -131,7 +134,14 @@ registerGraphScheme()
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null)
-  backend = new Backend()
+  backend = new Backend({
+    // API keys are encrypted with the OS keyring (KWallet/GNOME Keyring) when there is one.
+    keyCipher: {
+      available: () => safeStorage.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend?.() !== 'basic_text',
+      encrypt: (t) => safeStorage.encryptString(t),
+      decrypt: (b) => safeStorage.decryptString(b),
+    },
+  })
   const b = backend
   handleGraphScheme((id) => b.projects.find(id)?.path ?? null)
   b.on('event', (ev) => {

@@ -120,6 +120,7 @@ Settings are stored in `~/.config/LocalForge/settings.json` and are all editable
 | llama-server endpoint | `http://127.0.0.1:8080` | Sandboxes never reach it directly, only through the proxy. |
 | systemd unit | `llama.service` | Start/Restart/Stop buttons call `systemctl --user`; log viewer included. |
 | Model | from llama.service | Pick any downloaded GGUF model or download one from Hugging Face; uses a systemd drop-in, "Restore original" undoes it. |
+| API models | none | Settings → API models: add Venice, OpenRouter, OpenAI, DeepSeek or any OpenAI-compatible API, its key and models, then pick one in the chat's model menu. The key stays in the main process (encrypted with the system keyring); the stats proxy adds it, so sandboxes never see it. Messages and code go to that provider, billed per token. |
 | Context / output limit | 65536 / 16384 | Written into each sandbox's OpenCode config. |
 | Stats proxy port | 8081 | Changing it requires *Reset sandbox* on existing projects. |
 | CPU / memory limit | half the cores (max 8) / 16 GB | Applied live with `podman update`. |

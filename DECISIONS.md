@@ -343,3 +343,37 @@ updates live from `todo.updated` events. It shows done/total (cancelled tasks ar
 progress bar, and the in-progress task is highlighted. It collapses to one line showing the current
 task (remembered), and is hidden when the session has no tasks. Verified by `e2e/tasks-e2e.ts`
 (isolated instance, events sent the way the backend forwards OpenCode's).
+
+### D34. API models (Venice, OpenRouter, OpenAI, any OpenAI-compatible API)
+Online models can be used next to the local one, chosen per chat in the composer's model menu
+(Settings → API models to add an API, its key and its models). Design choices:
+* **The key never enters a sandbox.** OpenCode keeps talking to the stats proxy; API models are
+  listed in its config under the same provider with ids `lf-api/<provider>/<model>`. The proxy
+  sees that prefix, swaps in the real model id, adds `Authorization` and sends the request to the
+  provider. Only models added in Settings are accepted (404 otherwise; 401 without a key), so the
+  agent can't pick another model on the user's bill. Session/project headers are not passed on.
+* **Keys** are in `~/.config/LocalForge/api-keys.json` (mode 600), encrypted with Electron
+  safeStorage (KWallet/GNOME Keyring) when available, otherwise plain text, which the UI says.
+  The renderer only learns whether a key is saved.
+* **Switching model doesn't touch the OpenCode config.** Rewriting it restarts OpenCode (which
+  would interrupt a running agent), so the choice goes with each message (`model` in
+  `promptAsync`). Subagents inherit it: OpenCode's task tool uses `agent.model ?? <parent
+  message's model>` (checked in the 1.19.6 binary). Adding/removing API models does rewrite it.
+* API requests get no llama.cpp stats fields and no reasoning-effort rewrite (the effort pill is
+  hidden); `stream_options.include_usage` is added so token counts still show. For Venice,
+  `venice_parameters.include_venice_system_prompt: false`, since the agent has its own.
+* Model lists are read from the provider's `/models` (OpenAI, Venice `model_spec`, OpenRouter
+  fields understood); models that report no tool calling are marked, as the agent needs tools.
+Verified by `tests/apiModels.test.ts` and `e2e/api-models-e2e.ts` (isolated instance against a
+fake API: key handling, model list, picking, proxy routing, removal).
+
+### D35. Todo reminder in the proxy
+
+The local model wrote its todo list once and only marked items done at the very end (seen in a
+real session: 9 items, about 100 tool calls, then one update with everything completed), so the
+Tasks box never moved. The stats proxy now adds a short `<system-reminder>` to the end of the last
+tool result when the agent has an unfinished list and has made 8 tool calls since it last called
+`todowrite`, then again every 8 calls. It is only in that one request: nothing is stored in the
+session, and the cached prompt prefix is unchanged. Subagents (no `todowrite` tool), finished lists
+and turns that start with a user message are left alone. Applies to API models too. A matching
+rule was added to the AGENTS.md rules for new projects; the reminder also covers existing ones.

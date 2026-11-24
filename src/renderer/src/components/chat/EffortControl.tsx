@@ -25,6 +25,9 @@ export function EffortControl() {
   const idx = Math.max(0, steps.indexOf(effective))
   const name = (v: string) => (v === '' ? 'On' : label(v))
   const isDefault = effort === '' || (effort !== 'none' && !steps.includes(effort))
+  // API models decide their own thinking; this setting only reaches the local model.
+  const usingApi = useStore((s) => !!s.settings?.api.active)
+  if (usingApi) return null
 
   return (
     <div className="relative shrink-0">

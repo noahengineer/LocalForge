@@ -23,7 +23,23 @@ export interface StatsProxyOptions {
   rewriteBody?: (body: Record<string, unknown>) => Record<string, unknown>
   /** Minimum interval between 'update' events per request (ms). Default 100. */
   updateIntervalMs?: number
+  /**
+   * Send a chat request somewhere other than llama-server (an API model). Return null to use
+   * llama-server, a route to forward it there instead, or an error to answer it directly.
+   */
+  route?: (body: Record<string, unknown>) => ApiRoute | { error: string; status: number } | null
 }
+
+/** Where an API model's request goes. */
+export interface ApiRoute {
+  /** Base URL, e.g. https://api.venice.ai/api/v1 (the request path's /v1 is replaced by it). */
+  baseUrl: string
+  apiKey: string
+  body: Record<string, unknown>
+}
+
+/** Request headers passed on to an API: nothing that identifies the user's sessions or projects. */
+const API_HEADERS = new Set(['content-type', 'accept', 'user-agent'])
 
 export interface StatsProxyEvents {
   start: [LlmRequestStats]
@@ -89,6 +105,7 @@ export class StatsProxy extends EventEmitter<StatsProxyEvents> {
       injectStatsFields: options.injectStatsFields ?? true,
       updateIntervalMs: options.updateIntervalMs ?? 100,
       rewriteBody: options.rewriteBody ?? ((b) => b),
+      route: options.route ?? (() => null),
     }
   }
 
@@ -154,6 +171,12 @@ export class StatsProxy extends EventEmitter<StatsProxyEvents> {
         this.forward(req, res, path, raw, null)
         return
       }
+      const route = this.opts.route(body)
+      if (route && 'error' in route) {
+        res.writeHead(route.status, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: { message: route.error, type: 'localforge_error' } }))
+        return
+      }
       const injected = this.opts.injectStatsFields ? injectStats(body) : body
       const sendBody = this.opts.rewriteBody(injected)
       const tracker = new RequestTracker({
@@ -163,6 +186,11 @@ export class StatsProxy extends EventEmitter<StatsProxyEvents> {
         sessionId: headerOf(req, 'x-opencode-session-id') ?? headerOf(req, 'x-session-id'),
         parentSessionId: headerOf(req, 'x-parent-session-id'),
       })
+      if (route) {
+        // An API model: no llama.cpp fields, no reasoning-effort rewrite; the key is added here.
+        this.forward(req, res, path, Buffer.from(JSON.stringify(route.body)), tracker, route)
+        return
+      }
       this.forward(req, res, path, Buffer.from(JSON.stringify(sendBody)), tracker)
     })
   }
@@ -173,14 +201,19 @@ export class StatsProxy extends EventEmitter<StatsProxyEvents> {
     path: string,
     body: Buffer | null,
     tracker: RequestTracker | null,
+    api?: ApiRoute,
   ): void {
-    const up = this.upstream
+    const up = api ? new URL(api.baseUrl) : this.upstream
     const basePath = up.pathname.replace(/\/$/, '')
+    // An API's base URL already ends in its version (/api/v1), so drop the client's /v1.
+    if (api) path = path.replace(/^\/v1(?=\/)/, '')
     const headers: http.OutgoingHttpHeaders = {}
     for (const [k, v] of Object.entries(req.headers)) {
       if (v === undefined || HOP_BY_HOP.has(k.toLowerCase())) continue
+      if (api && !API_HEADERS.has(k.toLowerCase())) continue
       headers[k] = v
     }
+    if (api) headers.authorization = `Bearer ${api.apiKey}`
     headers.host = up.host
     if (body) {
       headers['content-length'] = String(body.length)

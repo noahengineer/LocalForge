@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import type {
+  ApiModelInfo,
   BackendEvent,
   ChangesInfo,
   Checkpoint,
@@ -33,14 +34,18 @@ import { ImageManager } from './image'
 import { controlUnit, getLlamaStatus, unitLogs } from './llama'
 import { applyReasoningEffort, applyServerOptions, lookupHfModel, modelsInfo, switchModel } from './models'
 import { OpenCodeConnection, type OcEvent } from './opencode'
-import { buildOpenCodeConfig, modelKeyOf, PROVIDER_ID } from './opencodeConfig'
+import { apiModelKeyOf, buildOpenCodeConfig, modelKeyOf, PROVIDER_ID } from './opencodeConfig'
+import { ApiKeyStore, type KeyCipher } from './apiKeys'
+import { parseApiModels } from './apiModelList'
+import { activeApiModel, API_MODEL_PREFIX, findApiModel } from '../../shared/apiModels'
 import { dataDir, expandHome, sandboxDir } from './paths'
+import { addTodoReminder } from './todoReminder'
 import { Podman } from './podman'
 import { CreateTracker, ensureNewFolder, folderNameOf, gitInit, hostGitIdentity, IMPORT_STEPS, makeProject, newProjectId, ProjectStore, validateProjectName } from './projects'
 import { inspectFolder } from './importer'
 import { SandboxManager } from './sandbox'
 import { SettingsStore } from './settingsStore'
-import { StatsProxy } from './stats/proxy'
+import { StatsProxy, type ApiRoute } from './stats/proxy'
 import { StatsStore, type OcTokens } from './statsStore'
 import { agentsMd, getTemplate, importedAgentsMd, loadTemplates, scaffold, templateVars } from './templates'
 
@@ -57,6 +62,9 @@ interface PendingLink {
 export interface BackendOptions {
   settingsFile?: string
   dataDir?: string
+  /** Encrypts API keys at rest (Electron safeStorage in the app). */
+  keyCipher?: KeyCipher | null
+  apiKeysFile?: string
 }
 
 export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
@@ -65,6 +73,7 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
   readonly images: ImageManager
   readonly sandboxes: SandboxManager
   readonly proxy: StatsProxy
+  readonly apiKeys: ApiKeyStore
   readonly hardware: HardwareMonitor
   readonly stats: StatsStore
   readonly projects: ProjectStore
@@ -81,6 +90,7 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
     super()
     this.dataRoot = opts.dataDir ?? dataDir()
     this.settings = new SettingsStore(opts.settingsFile)
+    this.apiKeys = new ApiKeyStore(opts.keyCipher ?? null, opts.apiKeysFile)
     this.podman = new Podman(() => ({ root: expandHome(this.settings.get().sandbox.podmanRoot) }))
     this.images = new ImageManager(this.podman, sandboxDir)
     this.sandboxes = new SandboxManager(this.podman, () => this.settings.get())
@@ -89,7 +99,8 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
       port: s.proxy.port,
       upstream: s.llama.baseUrl,
       injectStatsFields: s.proxy.injectStats,
-      rewriteBody: (b) => applyReasoningEffort(b, this.settings.get().llama.reasoningEffort, this.llama?.reasoningLevels ?? null),
+      rewriteBody: (b) => addTodoReminder(applyReasoningEffort(b, this.settings.get().llama.reasoningEffort, this.llama?.reasoningLevels ?? null)),
+      route: (b) => this.apiRoute(b),
     })
     this.hardware = new HardwareMonitor(() => this.liveTps())
     this.stats = new StatsStore(path.join(this.dataRoot, 'stats'))
@@ -146,6 +157,9 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
     for (const t of this.timers) clearInterval(t)
     this.timers = []
     this.hardware.stop()
+    // Free the proxy port first: stopping sandboxes below can take a while, and the window is
+    // already gone, so the port should not look taken by a closed app.
+    await this.proxy.stop()
     for (const p of this.ptys.values()) p.close()
     this.ptys.clear()
     for (const c of this.conns.values()) c.stop()
@@ -154,7 +168,6 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
     if (this.settings.get().sandbox.stopOnQuit) {
       await Promise.all(ids.map((id) => this.sandboxes.stop(id).catch(() => {})))
     }
-    await this.proxy.stop()
   }
 
   private async onSettingsChanged(cur: Settings, prev: Settings): Promise<void> {
@@ -172,7 +185,8 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
       cur.sandbox.computerUseCoords !== prev.sandbox.computerUseCoords ||
       cur.llama.contextLimit !== prev.llama.contextLimit ||
       cur.llama.outputLimit !== prev.llama.outputLimit ||
-      cur.llama.modelName !== prev.llama.modelName
+      cur.llama.modelName !== prev.llama.modelName ||
+      JSON.stringify(cur.api.providers) !== JSON.stringify(prev.api.providers)
     if (cfgChanged) {
       for (const id of this.conns.keys()) {
         const p = this.projects.find(id)
@@ -232,12 +246,68 @@ export class Backend extends EventEmitter<{ event: [BackendEvent] }> {
       vision: this.llama ? this.llama.vision || !this.llama.up : true,
       requireApproval: s.agent.requireApproval,
       computerUseCoords: s.sandbox.computerUseCoords,
+      apiProviders: s.api.providers,
     })
     return JSON.stringify(cfg, null, 2) + '\n'
   }
 
+  /** The model chats use: the chosen API model, or the local one. */
   async modelRef(): Promise<{ providerID: string; modelID: string }> {
+    const api = activeApiModel(this.settings.get())
+    if (api) return { providerID: PROVIDER_ID, modelID: apiModelKeyOf(api.provider.id, api.model.id) }
     return { providerID: PROVIDER_ID, modelID: modelKeyOf(await this.resolveModelId()) }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // API models
+
+  /**
+   * Called by the stats proxy for every chat request. OpenCode names API models
+   * "lf-api/<providerId>/<modelId>"; only models set up in Settings are allowed, and the key is
+   * added here, so a sandbox can use the chosen models but never sees the key.
+   */
+  apiRoute(body: Record<string, unknown>): ApiRoute | { error: string; status: number } | null {
+    if (typeof body.model !== 'string' || !body.model.startsWith(API_MODEL_PREFIX)) return null
+    const ref = body.model.slice(API_MODEL_PREFIX.length)
+    const found = findApiModel(this.settings.get().api.providers, ref)
+    if (!found) return { error: `LocalForge: the API model "${ref}" is not set up (Settings → Model → API models).`, status: 404 }
+    const key = this.apiKeys.get(found.provider.id)
+    if (!key) return { error: `LocalForge: no API key saved for ${found.provider.name} (Settings → Model → API models).`, status: 401 }
+    const out: Record<string, unknown> = { ...addTodoReminder(body), model: found.model.id }
+    // Token counts for the stats (most OpenAI-compatible APIs send them only when asked).
+    if (out.stream === true && out.stream_options === undefined) out.stream_options = { include_usage: true }
+    if (new URL(found.provider.baseUrl).hostname === 'api.venice.ai') {
+      // Venice adds its own chat system prompt unless told not to; the agent has its own.
+      const vp = typeof body.venice_parameters === 'object' && body.venice_parameters ? body.venice_parameters : {}
+      out.venice_parameters = { include_venice_system_prompt: false, ...vp }
+    }
+    return { baseUrl: found.provider.baseUrl, apiKey: key, body: out }
+  }
+
+  async apiKeyStatus(): Promise<{ keys: Record<string, boolean>; encrypted: boolean }> {
+    const keys: Record<string, boolean> = {}
+    for (const p of this.settings.get().api.providers) keys[p.id] = this.apiKeys.has(p.id)
+    return { keys, encrypted: this.apiKeys.encrypted }
+  }
+
+  async setApiKey(providerId: string, key: string): Promise<void> {
+    if (typeof providerId !== 'string' || typeof key !== 'string' || key.length > 1000) throw new Error('invalid key')
+    if (!this.settings.get().api.providers.some((p) => p.id === providerId)) throw new Error('unknown provider')
+    this.apiKeys.set(providerId, key)
+  }
+
+  async listApiModels(providerId: string): Promise<ApiModelInfo[]> {
+    const p = this.settings.get().api.providers.find((x) => x.id === providerId)
+    if (!p) throw new Error('unknown provider')
+    const key = this.apiKeys.get(p.id)
+    const venice = new URL(p.baseUrl).hostname === 'api.venice.ai'
+    const r = await fetch(`${p.baseUrl}/models${venice ? '?type=text' : ''}`, {
+      headers: key ? { authorization: `Bearer ${key}` } : {},
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (r.status === 401 || r.status === 403) throw new Error(`${p.name} refused the API key (HTTP ${r.status}).`)
+    if (!r.ok) throw new Error(`${p.name}: HTTP ${r.status} listing models.`)
+    return parseApiModels(await r.json())
   }
 
   // ---------------------------------------------------------------------------------------------

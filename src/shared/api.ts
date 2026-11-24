@@ -321,9 +321,26 @@ export interface BackendApi {
   buildGraph(projectId: string): Promise<{ ok: boolean; message: string }>
   /** Turn one-conversation-at-a-time on/off (restarts llama-server). */
   setSingleSlot(on: boolean): Promise<{ ok: boolean; message: string }>
+  /** Which API providers have a key saved (keys themselves never leave the main process). */
+  apiKeyStatus(): Promise<{ keys: Record<string, boolean>; encrypted: boolean }>
+  /** Save a provider's API key ('' removes it). */
+  setApiKey(providerId: string, key: string): Promise<void>
+  /** Ask a provider which models it offers. */
+  listApiModels(providerId: string): Promise<ApiModelInfo[]>
 
   ptyOpen(projectId: string, cols: number, rows: number): Promise<string>
   ptyInput(ptyId: string, data: string): Promise<void>
   ptyResize(ptyId: string, cols: number, rows: number): Promise<void>
   ptyClose(ptyId: string): Promise<void>
+}
+
+/** A model offered by an API provider (from its /models list). Unknown values are null. */
+export interface ApiModelInfo {
+  id: string
+  name: string
+  contextLimit: number | null
+  outputLimit: number | null
+  vision: boolean
+  /** Whether it can call tools (the agent needs this); null = the provider doesn't say. */
+  tools: boolean | null
 }

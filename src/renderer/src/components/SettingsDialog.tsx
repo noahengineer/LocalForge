@@ -4,8 +4,9 @@ import type { HfModelInfo, ModelsInfo } from '@shared/api'
 import { api, errMsg } from '../api'
 import { toast, updateSettings, useStore } from '../store'
 import { Button, cx, Dot, Modal, Spinner, Toggle } from './ui'
+import { ApiModelsSection } from './ApiModelsSection'
 
-type Section = 'model' | 'sandbox' | 'stats' | 'general'
+type Section = 'model' | 'api' | 'sandbox' | 'stats' | 'general'
 
 function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -353,26 +354,29 @@ function GeneralSection({ s }: { s: Settings }) {
 
 export function SettingsDialog() {
   const s = useStore((st) => st.settings)
-  const [sec, setSec] = useState<Section>('model')
+  const initial = useStore((st) => st.settingsSection)
+  const [sec, setSec] = useState<Section>(initial === 'api' ? 'api' : 'model')
   if (!s) return null
   const nav: Array<[Section, string]> = [
     ['model', 'Model'],
+    ['api', 'API models'],
     ['sandbox', 'Sandbox & agent'],
     ['stats', 'Stats'],
     ['general', 'Appearance'],
   ]
   return (
-    <Modal title="Settings" onClose={() => useStore.setState({ showSettings: false })} width="max-w-4xl">
+    <Modal title="Settings" onClose={() => useStore.setState({ showSettings: false, settingsSection: null })} width="max-w-4xl">
       <div className="flex min-h-[480px]">
         <nav className="w-48 shrink-0 border-r border-line p-2">
           {nav.map(([id, label]) => (
-            <button key={id} onClick={() => setSec(id)} className={cx('block w-full rounded-lg px-3 py-1.5 text-left text-[13px]', sec === id ? 'bg-hover text-fg' : 'text-muted hover:text-fg')}>
+            <button key={id} onClick={() => setSec(id)} data-testid={`settings-nav-${id}`} className={cx('block w-full rounded-lg px-3 py-1.5 text-left text-[13px]', sec === id ? 'bg-hover text-fg' : 'text-muted hover:text-fg')}>
               {label}
             </button>
           ))}
         </nav>
         <div className="min-w-0 flex-1 p-5">
           {sec === 'model' && <ModelSection s={s} />}
+          {sec === 'api' && <ApiModelsSection s={s} />}
           {sec === 'sandbox' && <SandboxSection s={s} />}
           {sec === 'stats' && <StatsSection s={s} />}
           {sec === 'general' && <GeneralSection s={s} />}

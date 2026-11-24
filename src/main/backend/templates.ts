@@ -102,6 +102,7 @@ export const GLOBAL_RULES = [
   'If a tool call fails, re-read the error and retry correctly.',
   "Before using a library/API you're unsure about, search for or fetch its current docs.",
   'To test GUI apps, run them and verify with screenshots; for web apps, use Playwright.',
+  'If you keep a todo list, update it (todowrite) as soon as you finish each item, before starting the next. The user watches it live.',
 ]
 
 const rulesSection = () => `## Rules

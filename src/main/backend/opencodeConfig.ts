@@ -4,6 +4,9 @@
  * schema served by `opencode serve` 1.19.6 (GET /doc).
  */
 
+import type { ApiModel, ApiProvider } from '../../shared/settings'
+import { API_MODEL_PREFIX } from '../../shared/apiModels'
+
 export const PROVIDER_ID = 'localforge'
 
 export interface OpenCodeConfigInput {
@@ -19,6 +22,12 @@ export interface OpenCodeConfigInput {
   requireApproval: boolean
   /** 'pixels' | 'norm1000' coordinate convention for the computer-use tools. */
   computerUseCoords?: 'pixels' | 'norm1000'
+  /**
+   * API models, also reached through the stats proxy (which adds the key). Which model a chat
+   * uses is chosen per message (Backend.modelRef), not here: a config change restarts OpenCode,
+   * which would interrupt a running agent on every model switch.
+   */
+  apiProviders?: ApiProvider[]
 }
 
 /**
@@ -66,8 +75,31 @@ export function modelKeyOf(modelId: string): string {
   return key || 'local-model'
 }
 
+/** OpenCode's key for an API model (a separate namespace from local model keys). */
+export function apiModelKeyOf(providerId: string, modelId: string): string {
+  return `api-${providerId}-${modelKeyOf(modelId)}`
+}
+
+function apiModelEntry(providerId: string, m: ApiModel): Record<string, unknown> {
+  return {
+    // The proxy recognises this prefix, swaps in the real id and sends it to the provider.
+    id: `${API_MODEL_PREFIX}${providerId}/${m.id}`,
+    name: m.name,
+    tool_call: true,
+    reasoning: true,
+    attachment: m.vision,
+    temperature: true,
+    modalities: { input: m.vision ? ['text', 'image'] : ['text'], output: ['text'] },
+    limit: { context: m.contextLimit, output: m.outputLimit },
+  }
+}
+
 export function buildOpenCodeConfig(i: OpenCodeConfigInput): Record<string, unknown> {
   const key = modelKeyOf(i.modelId)
+  const apiModels: Record<string, unknown> = {}
+  for (const p of i.apiProviders ?? []) {
+    for (const m of p.models) apiModels[apiModelKeyOf(p.id, m.id)] = apiModelEntry(p.id, m)
+  }
   const model = `${PROVIDER_ID}/${key}`
   return {
     $schema: 'https://opencode.ai/config.json',
@@ -100,6 +132,7 @@ export function buildOpenCodeConfig(i: OpenCodeConfigInput): Record<string, unkn
             modalities: { input: i.vision ? ['text', 'image'] : ['text'], output: ['text'] },
             limit: { context: i.contextLimit, output: i.outputLimit },
           },
+          ...apiModels,
         },
       },
     },
